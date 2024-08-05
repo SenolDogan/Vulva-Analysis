@@ -1,0 +1,42 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from lifelines import KaplanMeierFitter
+
+# Load the data
+data = pd.read_csv('hockel.csv')
+
+# Convert Date_RFS to numeric months and create event indicator
+data['RFS_months'] = pd.to_numeric(data['Date_RFS (months)'], errors='coerce')
+data['RFS_event'] = data['Event_RFS'].astype(bool)
+
+# Limit to 60 months
+data['RFS_months_limited'] = data['RFS_months'].clip(upper=60)
+
+# Initialize the plot
+plt.figure(figsize=(10, 6))
+
+# Define colors for each stage
+colors = {'1': 'blue', '2': 'red', '3': 'green'}
+
+# Perform KM analysis for each oT-Stage
+for stage in sorted(data['oT-Stage'].unique()):
+    if pd.notna(stage):  # Check if stage is not NaN
+        mask = data['oT-Stage'] == stage
+        kmf = KaplanMeierFitter()
+        kmf.fit(data.loc[mask, 'RFS_months_limited'], 
+                data.loc[mask, 'RFS_event'], 
+                label=f'Stage {stage}')
+        kmf.plot(ci_show=True, color=colors.get(str(stage), 'gray'))
+
+# Customize the plot
+plt.title('Kaplan-Meier Recurrence Free Survival by oT-Stage')
+plt.xlabel('Months')
+plt.ylabel('Recurrence Free Survival Probability')
+plt.ylim(0, 1)
+plt.xlim(0, 60)
+plt.grid(True)
+plt.legend()
+
+# Show the plot
+plt.tight_layout()
+plt.show()
